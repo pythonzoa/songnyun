@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>방탈출 게임 - 관리자</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; padding: 20px; }
+        .container { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,0.3); max-width: 1000px; margin: 0 auto; padding: 40px; }
+        h1 { text-align: center; color: #667eea; margin-bottom: 10px; font-size: 2em; }
+        .subtitle { text-align: center; color: #f093fb; margin-bottom: 30px; font-size: 1.1em; font-weight: bold; }
+        .tabs { display: flex; margin-bottom: 30px; border-bottom: 3px solid #e0e0e0; }
+        .tab { padding: 15px 30px; cursor: pointer; font-weight: bold; color: #666; transition: all 0.3s; }
+        .tab:hover { color: #667eea; }
+        .tab.active { color: #667eea; border-bottom: 3px solid #667eea; margin-bottom: -3px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .firebase-setup { background: #fff3e0; border-left: 4px solid #ff9800; padding: 20px; margin-bottom: 20px; border-radius: 5px; }
+        .firebase-setup h3 { color: #e65100; margin-bottom: 10px; }
+        .firebase-setup input { width: 100%; padding: 10px; margin: 5px 0; border: 2px solid #ddd; border-radius: 5px; font-family: monospace; }
+        .firebase-setup label { display: block; margin-top: 10px; font-weight: bold; color: #333; }
+        .status { padding: 10px; border-radius: 5px; margin: 10px 0; text-align: center; font-weight: bold; }
+        .status.connected { background: #d4edda; color: #155724; }
+        .status.disconnected { background: #f8d7da; color: #721c24; }
+        .status.loading { background: #fff3cd; color: #856404; }
+
+        .question-setup { border: 2px solid #e0e0e0; border-radius: 10px; padding: 20px; margin-bottom: 20px; background: #f9f9f9; }
+        .question-setup h3 { color: #667eea; margin-bottom: 15px; }
+        .upload-area { border: 2px dashed #ccc; border-radius: 10px; padding: 20px; text-align: center; margin: 10px 0; cursor: pointer; transition: all 0.3s; background: white; }
+        .upload-area:hover { border-color: #667eea; background: #f5f5f5; }
+        .upload-area.has-image { border-color: #4caf50; background: #f1f8f4; }
+        .preview-image { max-width: 100%; max-height: 200px; margin-top: 10px; border-radius: 10px; }
+        input[type="text"] { width: 100%; padding: 12px; margin: 10px 0; border: 2px solid #e0e0e0; border-radius: 8px; font-size: 1em; }
+        input[type="file"] { display: none; }
+        label { display: block; margin: 10px 0 5px 0; font-weight: bold; color: #333; }
+
+        .btn { padding: 12px 30px; border: none; border-radius: 8px; font-size: 1em; cursor: pointer; transition: all 0.3s; font-weight: bold; margin: 5px; }
+        .btn-primary { background: #667eea; color: white; }
+        .btn-primary:hover { background: #5568d3; }
+        .btn-success { background: #4caf50; color: white; }
+        .btn-success:hover { background: #45a049; }
+        .btn-warning { background: #ff9800; color: white; }
+        .btn-warning:hover { background: #e68900; }
+
+        .info-box { background: #e3f2fd; border-left: 4px solid #2196f3; padding: 15px; margin-bottom: 20px; border-radius: 5px; }
+        .info-box p { margin: 5px 0; color: #1976d2; }
+        .button-group { text-align: center; margin-top: 20px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1>🔐 송년회 방탈출 게임</h1>
+    <div class="subtitle">관리자 페이지 (설정 & 문제 등록)</div>
+
+    <div class="tabs">
+        <div class="tab active" id="tab-setup" onclick="showTab('setup', this)">⚙️ Firebase 설정</div>
+        <div class="tab" id="tab-questions" onclick="showTab('questions', this)">📝 문제 관리</div>
+        <div class="tab" id="tab-reset" onclick="showTab('reset', this)">🔄 데이터 관리</div>
+    </div>
+
+    <!-- 설정 탭 -->
+    <div id="setupTab" class="tab-content active">
+        <div class="firebase-setup">
+            <h3>🔥 Firebase 설정</h3>
+            <label>API Key:</label>
+            <input type="text" id="apiKey" value="AIzaSyBeC5C9NYZVO3c5MZrTeUfpFjCnW059bDQ">
+            <label>Auth Domain:</label>
+            <input type="text" id="authDomain" value="selab-party.firebaseapp.com">
+            <label>Database URL:</label>
+            <input type="text" id="databaseURL" value="https://selab-party-default-rtdb.asia-southeast1.firebasedatabase.app">
+            <label>Project ID:</label>
+            <input type="text" id="projectId" value="selab-party">
+
+            <div class="button-group">
+                <button class="btn btn-warning" onclick="connectFirebase()">🔗 Firebase 연결 테스트</button>
+            </div>
+            <div id="connectionStatus" class="status loading">⏳ Firebase SDK 로딩 중...</div>
+        </div>
+
+        <div class="info-box">
+            <p>📌 Firebase Realtime Database 규칙 (행사 테스트용):</p>
+<pre style="background:#fff;padding:10px;border-radius:5px;margin:10px 0;">{
+  "rules": {
+    ".read": true,
+    ".write": true
+  }
+}</pre>
+        </div>
+    </div>
+
+    <!-- 문제 관리 탭 -->
+    <div id="questionsTab" class="tab-content">
+        <div class="question-setup">
+            <h3>📝 문제 1</h3>
+            <label>문제 이미지:</label>
+            <div class="upload-area" id="q1ImageArea">
+                <p id="q1ImageText">클릭하여 이미지 업로드</p>
+                <img id="q1ImagePreview" class="preview-image" style="display:none;">
+            </div>
+            <input type="file" id="q1Image" accept="image/*">
+
+            <label>힌트 이미지 (선택):</label>
+            <div class="upload-area" id="q1HintArea">
+                <p id="q1HintText">클릭하여 힌트 업로드</p>
+                <img id="q1HintPreview" class="preview-image" style="display:none;">
+            </div>
+            <input type="file" id="q1Hint" accept="image/*">
+
+            <label>정답:</label>
+            <input type="text" id="q1Answer" placeholder="정답 입력">
+        </div>
+
+        <div class="question-setup">
+            <h3>📝 문제 2</h3>
+            <label>문제 이미지:</label>
+            <div class="upload-area" id="q2ImageArea">
+                <p id="q2ImageText">클릭하여 이미지 업로드</p>
+                <img id="q2ImagePreview" class="preview-image" style="display:none;">
+            </div>
+            <input type="file" id="q2Image" accept="image/*">
+
+            <label>힌트 이미지 (선택):</label>
+            <div class="upload-area" id="q2HintArea">
+                <p id="q2HintText">클릭하여 힌트 업로드</p>
+                <img id="q2HintPreview" class="preview-image" style="display:none;">
+            </div>
+            <input type="file" id="q2Hint" accept="image/*">
+
+            <label>정답:</label>
+            <input type="text" id="q2Answer" placeholder="정답 입력">
+        </div>
+
+        <div class="question-setup">
+            <h3>📝 문제 3</h3>
+            <label>문제 이미지:</label>
+            <div class="upload-area" id="q3ImageArea">
+                <p id="q3ImageText">클릭하여 이미지 업로드</p>
+                <img id="q3ImagePreview" class="preview-image" style="display:none;">
+            </div>
+            <input type="file" id="q3Image" accept="image/*">
+
+            <label>힌트 이미지 (선택):</label>
+            <div class="upload-area" id="q3HintArea">
+                <p id="q3HintText">클릭하여 힌트 업로드</p>
+                <img id="q3HintPreview" class="preview-image" style="display:none;">
+            </div>
+            <input type="file" id="q3Hint" accept="image/*">
+
+            <label>정답:</label>
+            <input type="text" id="q3Answer" placeholder="정답 입력">
+        </div>
+
+        <div class="button-group">
+            <button class="btn btn-success" id="generateBtn">✅ 플레이어 페이지 생성</button>
+        </div>
+        <div id="qrSection" class="qr-section" style="display:none;">
+            <h3>✅ 생성 완료!</h3>
+            <p>아래 버튼을 눌러 <strong>escape-room-game.html</strong> 파일을 저장한 뒤, 참가자에게 배포하세요.</p>
+            <button class="btn btn-success" onclick="downloadPlayerPage()">💾 HTML 다운로드</button>
+        </div>
+    </div>
+
+    <!-- 데이터 관리 탭 -->
+    <div id="resetTab" class="tab-content">
+        <div class="firebase-setup">
+            <h3>🔄 데이터 초기화</h3>
+            <p style="color:#666;margin:10px 0;">게임 데이터를 초기화하여 새로운 이벤트를 시작할 수 있습니다.</p>
+            
+            <div class="info-box" style="background:#fff3e0;border-left-color:#ff9800;">
+                <p style="color:#e65100;"><strong>⚠️ 주의사항</strong></p>
+                <ul style="margin-left:20px;color:#666;">
+                    <li>초기화하면 모든 참가자 데이터가 영구 삭제됩니다</li>
+                    <li>복구할 수 없으니 신중하게 진행하세요</li>
+                    <li>실제 게임 시작 전 테스트 데이터 삭제용으로 사용하세요</li>
+                </ul>
+            </div>
+
+            <div style="background:#f9f9f9;padding:20px;border-radius:10px;margin:20px 0;">
+                <h4 style="color:#333;margin-bottom:15px;">삭제될 데이터:</h4>
+                <ul style="margin-left:20px;color:#666;">
+                    <li><strong>players</strong>: 모든 참가자 정보 및 진행 상황</li>
+                    <li><strong>completed</strong>: 게임 완료자 목록</li>
+                    <li><strong>wrongAnswers</strong>: 오답 기록</li>
+                </ul>
+            </div>
+
+            <div id="resetStatus" class="status" style="display:none;margin:20px 0;"></div>
+
+            <div class="button-group">
+                <button class="btn" style="background:#ff6b6b;color:white;font-size:1.1em;padding:15px 40px;" onclick="confirmReset()">🗑️ 모든 데이터 초기화</button>
+            </div>
+        </div>
+
+        <div style="margin-top:30px;padding:20px;background:#e3f2fd;border-radius:10px;border-left:4px solid #2196f3;">
+            <h3 style="color:#1976d2;margin-bottom:10px;">📊 실시간 모니터링</h3>
+            <p style="color:#666;margin-bottom:15px;">게임 진행 상황을 실시간으로 확인하세요.</p>
+            <button class="btn btn-primary" onclick="window.open('monitor.html', '_blank')">📺 모니터 페이지 열기</button>
+        </div>
+    </div>
+</div>
+
+<!-- Firebase SDK (연결 테스트용) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<script>
+    var db = null;
+    var gameData = {
+        questions: [
+            { image: null, hint: null, answer: '' },
+            { image: null, hint: null, answer: '' },
+            { image: null, hint: null, answer: '' }
+        ]
+    };
+    var generatedHTML = '';
+
+    window.onload = function() {
+        // Firebase SDK 로딩 상태 표시
+        setTimeout(function() {
+            if (typeof firebase !== 'undefined') {
+                document.getElementById('connectionStatus').className = 'status disconnected';
+                document.getElementById('connectionStatus').textContent = '⚠️ "Firebase 연결 테스트" 버튼을 클릭하세요';
+            } else {
+                document.getElementById('connectionStatus').className = 'status disconnected';
+                document.getElementById('connectionStatus').textContent = '❌ Firebase SDK 로드 실패';
+            }
+        }, 500);
+
+        setupUploads();
+        document.getElementById('generateBtn').onclick = generatePlayerPage;
+    };
+
+    function showTab(name, el) {
+        document.querySelectorAll('.tab').forEach(function(t){ t.classList.remove('active'); });
+        document.querySelectorAll('.tab-content').forEach(function(t){ t.classList.remove('active'); });
+        el.classList.add('active');
+        document.getElementById(name + 'Tab').classList.add('active');
+    }
+
+    function connectFirebase() {
+        if (typeof firebase === 'undefined') {
+            document.getElementById('connectionStatus').className = 'status disconnected';
+            document.getElementById('connectionStatus').textContent = '❌ Firebase SDK 없음';
+            return;
+        }
+        var config = {
+            apiKey: document.getElementById('apiKey').value,
+            authDomain: document.getElementById('authDomain').value,
+            databaseURL: document.getElementById('databaseURL').value,
+            projectId: document.getElementById('projectId').value
+        };
+        try {
+            if (firebase.apps.length) firebase.app().delete();
+        } catch(e) {}
+        try {
+            firebase.initializeApp(config);
+            db = firebase.database();
+            document.getElementById('connectionStatus').className = 'status connected';
+            document.getElementById('connectionStatus').textContent = '✅ Firebase 연결 성공';
+        } catch(e) {
+            document.getElementById('connectionStatus').className = 'status disconnected';
+            document.getElementById('connectionStatus').textContent = '❌ 연결 실패: ' + e.message;
+        }
+    }
+
+    function setupUploads() {
+        for (var i=1; i<=3; i++) {
+            (function(n){
+                document.getElementById('q'+n+'ImageArea').onclick = function(){
+                    document.getElementById('q'+n+'Image').click();
+                };
+                document.getElementById('q'+n+'HintArea').onclick = function(){
+                    document.getElementById('q'+n+'Hint').click();
+                };
+                document.getElementById('q'+n+'Image').onchange = function(){
+                    handleUpload(n,'question');
+                };
+                document.getElementById('q'+n+'Hint').onchange = function(){
+                    handleUpload(n,'hint');
+                };
+            })(i);
+        }
+    }
+
+    function handleUpload(n, type) {
+        var id = 'q'+n+(type==='question'?'Image':'Hint');
+        var file = document.getElementById(id).files[0];
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            var data = e.target.result;
+            if (type==='question') {
+                gameData.questions[n-1].image = data;
+                document.getElementById('q'+n+'ImagePreview').src = data;
+                document.getElementById('q'+n+'ImagePreview').style.display = 'block';
+                document.getElementById('q'+n+'ImageText').textContent = '✓ 완료';
+                document.getElementById('q'+n+'ImageArea').classList.add('has-image');
+            } else {
+                gameData.questions[n-1].hint = data;
+                document.getElementById('q'+n+'HintPreview').src = data;
+                document.getElementById('q'+n+'HintPreview').style.display = 'block';
+                document.getElementById('q'+n+'HintText').textContent = '✓ 완료';
+                document.getElementById('q'+n+'HintArea').classList.add('has-image');
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function generatePlayerPage() {
+        var config = {
+            apiKey: document.getElementById('apiKey').value,
+            authDomain: document.getElementById('authDomain').value,
+            databaseURL: document.getElementById('databaseURL').value,
+            projectId: document.getElementById('projectId').value
+        };
+        for (var i=0; i<3; i++) {
+            var ans = document.getElementById('q'+(i+1)+'Answer').value.trim();
+            if (!ans) { alert('문제'+(i+1)+' 정답 필요'); return; }
+            if (!gameData.questions[i].image) { alert('문제'+(i+1)+' 이미지 필요'); return; }
+            gameData.questions[i].answer = ans;
+        }
+        generatedHTML = makePlayerHTML(gameData, config);
+        document.getElementById('qrSection').style.display = 'block';
+        alert('플레이어 페이지 HTML 생성 완료! "HTML 다운로드" 버튼으로 저장하세요.');
+    }
+
+    function downloadPlayerPage() {
+        if (!generatedHTML) { alert('먼저 "플레이어 페이지 생성"을 눌러주세요.'); return; }
+        var blob = new Blob([generatedHTML], {type:'text/html;charset=utf-8'});
+        var a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'escape-room-game.html';
+        a.click();
+    }
+
+function makePlayerHTML(data, config) {
+    var d64 = btoa(unescape(encodeURIComponent(JSON.stringify(data))));
+    var c64 = btoa(unescape(encodeURIComponent(JSON.stringify(config))));
+    return `<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>방탈출</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:sans-serif;background:linear-gradient(135deg,#667eea,#764ba2);min-height:100vh;display:flex;justify-content:center;align-items:center;padding:15px}
+.container{background:#fff;border-radius:20px;max-width:500px;width:100%;padding:30px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+h1{text-align:center;color:#667eea;margin-bottom:20px}
+.start-screen{text-align:center}
+.start-screen input{padding:15px;font-size:1.1em;width:100%;border:3px solid #667eea;border-radius:10px;text-align:center;margin:15px 0}
+.progress{text-align:center;margin:15px 0;font-size:1.2em;color:#667eea;font-weight:700}
+.question-image{max-width:100%;max-height:300px;margin:15px 0;border-radius:10px}
+.answer-input{padding:15px;font-size:1.1em;width:100%;border:3px solid #667eea;border-radius:10px;text-align:center;margin:10px 0}
+.btn{padding:12px 25px;border:none;border-radius:8px;font-size:1em;cursor:pointer;font-weight:700;margin:5px}
+.btn-primary{background:#667eea;color:#fff}
+.btn-secondary{background:#f093fb;color:#fff}
+.hint-section{margin:15px 0;padding:15px;background:#fffde7;border-radius:10px;display:none}
+.hint-image{max-width:100%;max-height:200px;margin-top:10px;border-radius:10px;border:3px solid #ffd700}
+.message{padding:12px;border-radius:10px;margin:15px 0;text-align:center;font-weight:700}
+.success{background:#d4edda;color:#155724}
+.error{background:#f8d7da;color:#721c24}
+.complete-screen{text-align:center;padding:30px 0;display:none}
+.trophy{font-size:5em;animation:bounce 1s infinite}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-15px)}}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.7);justify-content:center;align-items:center}
+.modal.show{display:flex}
+.modal-content{background:#fff;border-radius:20px;padding:25px;max-width:350px;width:90%;text-align:center}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="container">
+<h1>🔐 송년회 방탈출</h1>
+<div id="startScreen" class="start-screen">
+<p style="color:#666;margin-bottom:20px">이름을 입력해주세요!</p>
+<input type="text" id="playerName" placeholder="이름 입력"><br>
+<button class="btn btn-primary" id="startBtn">🎮 시작!</button>
+</div>
+<div id="gamePanel" class="hidden">
+<div class="progress" id="progress">문제 1/3</div>
+<div id="gameContent">
+<img id="questionImage" class="question-image">
+<input type="text" id="answerInput" class="answer-input" placeholder="정답 입력"><br>
+<button class="btn btn-primary" id="checkBtn">확인</button>
+<button class="btn btn-secondary" id="hintBtn">💡힌트</button>
+<div class="hint-section" id="hintSection">
+<strong>💡 힌트</strong>
+<img id="hintImage" class="hint-image">
+<p id="noHint" style="display:none;color:#999;margin-top:10px">힌트 없음</p>
+</div>
+<div id="message"></div>
+</div>
+<div id="completeScreen" class="complete-screen">
+<div class="trophy">🏆</div>
+<h2 style="color:#4caf50">축하합니다!</h2>
+<p id="completeName"></p>
+<p>탈출 성공! 🎉</p>
+<button class="btn btn-primary" id="goMonitorBtn" style="margin-top:15px;">📊 실시간 모니터 보기</button>
+</div>
+</div>
+</div>
+<div class="modal" id="wrongModal">
+<div class="modal-content">
+<h2 style="color:#f44336">❌ 오답!</h2>
+<p>게임이 종료되었습니다.<br>실시간 모니터로 이동합니다.</p>
+<button class="btn btn-primary" id="closeModal">확인</button>
+</div>
+</div>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"><\/script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"><\/script>
+<script>
+var gameData = JSON.parse(decodeURIComponent(escape(atob("${d64}"))));
+var firebaseConfig = JSON.parse(decodeURIComponent(escape(atob("${c64}"))));
+var db = null, currentQuestion = 0, playerName = "", wrongCount = 0, playerId = "";
+var gameOver = false;
+
+function init() {
+    if (typeof firebase !== "undefined") {
+        try {
+            firebase.initializeApp(firebaseConfig);
+            db = firebase.database();
+        } catch(e) {}
+    }
+    document.getElementById("startBtn").onclick = startGame;
+    document.getElementById("checkBtn").onclick = checkAnswer;
+    document.getElementById("hintBtn").onclick = showHint;
+    document.getElementById("closeModal").onclick = closeModal;
+    document.getElementById("playerName").onkeypress = function(e){
+        if (e.key === "Enter") startGame();
+    };
+    document.getElementById("answerInput").onkeypress = function(e){
+        if (e.key === "Enter") checkAnswer();
+    };
+    document.getElementById("goMonitorBtn").onclick = goMonitor;
+}
+
+function startGame() {
+    if (gameOver) return;
+    playerName = document.getElementById("playerName").value.trim();
+    if (!playerName) {
+        alert("이름을 입력해주세요!");
+        return;
+    }
+    playerId = playerName + "_" + Date.now();
+    var nowIso = new Date().toISOString();
+
+    if (db) {
+        db.ref("players/" + playerId).set({
+            name: playerName,
+            joinedAt: nowIso,
+            lastUpdate: nowIso,
+            stage: 0,
+            wrongCount: 0
+        });
+    }
+
+    document.getElementById("startScreen").classList.add("hidden");
+    document.getElementById("gamePanel").classList.remove("hidden");
+    showQuestion();
+}
+
+function showQuestion() {
+    var q = gameData.questions[currentQuestion];
+    document.getElementById("progress").textContent = "문제 " + (currentQuestion + 1) + "/3";
+    document.getElementById("questionImage").src = q.image;
+    document.getElementById("answerInput").value = "";
+    document.getElementById("answerInput").focus();
+    document.getElementById("hintSection").style.display = "none";
+    document.getElementById("message").innerHTML = "";
+    document.getElementById("gameContent").style.display = "block";
+    document.getElementById("completeScreen").style.display = "none";
+}
+
+function showHint() {
+    if (gameOver) return;
+    var q = gameData.questions[currentQuestion];
+    document.getElementById("hintSection").style.display = "block";
+    if (q.hint) {
+        document.getElementById("hintImage").src = q.hint;
+        document.getElementById("hintImage").style.display = "block";
+        document.getElementById("noHint").style.display = "none";
+    } else {
+        document.getElementById("hintImage").style.display = "none";
+        document.getElementById("noHint").style.display = "block";
+    }
+}
+
+function checkAnswer() {
+    if (gameOver) return;
+    var ans = document.getElementById("answerInput").value.trim();
+    var correct = gameData.questions[currentQuestion].answer.trim();
+    if (!ans) {
+        document.getElementById("message").innerHTML =
+            '<div class="message error">정답을 입력해주세요!</div>';
+        return;
+    }
+
+    var now = new Date();
+    var iso = now.toISOString();
+
+    if (ans === correct) {
+        document.getElementById("message").innerHTML =
+            '<div class="message success">✅ 정답!</div>';
+
+        if (db) {
+            db.ref("players/" + playerId).update({
+                stage: currentQuestion + 1,
+                wrongCount: wrongCount,
+                lastUpdate: iso
+            });
+        }
+
+        setTimeout(function(){
+            currentQuestion++;
+            if (currentQuestion >= 3) {
+                showComplete();
+            } else {
+                showQuestion();
+            }
+        }, 800);
+    } else {
+        wrongCount++;
+
+        if (db) {
+            db.ref("players/" + playerId).update({
+                wrongCount: wrongCount,
+                lastUpdate: iso
+            });
+
+            db.ref("wrongAnswers").push({
+                name: playerName,
+                question: currentQuestion + 1,
+                time: now.getHours() + ":" + String(now.getMinutes()).padStart(2,"0"),
+                timestamp: iso
+            });
+        }
+
+        gameOver = true;
+        document.getElementById("wrongModal").classList.add("show");
+    }
+}
+
+function closeModal() {
+    document.getElementById("wrongModal").classList.remove("show");
+    window.location.href = "monitor.html";
+}
+
+function showComplete() {
+    gameOver = true;
+    document.getElementById("gameContent").style.display = "none";
+    document.getElementById("completeScreen").style.display = "block";
+    document.getElementById("completeName").textContent = playerName + "님!";
+
+    var now = new Date();
+    var iso = now.toISOString();
+    var timeText = now.getHours() + ":" + String(now.getMinutes()).padStart(2,"0");
+
+    if (db) {
+        db.ref("completed/" + playerId).set({
+            name: playerName,
+            time: timeText,
+            wrongCount: wrongCount,
+            timestamp: iso
+        });
+
+        db.ref("players/" + playerId).update({
+            stage: 3,
+            wrongCount: wrongCount,
+            lastUpdate: iso
+        });
+    }
+}
+
+function goMonitor() {
+    window.location.href = "monitor.html";
+}
+
+window.onload = function() {
+    setTimeout(init, 500);
+};
+<\/script>
+</body>
+</html>`;
+}
+
+    function confirmReset() {
+        if (!db) {
+            alert('❌ Firebase에 연결되지 않았습니다.\n먼저 "Firebase 설정" 탭에서 연결 테스트를 진행하세요.');
+            return;
+        }
+
+        var confirmed = confirm('⚠️ 정말로 모든 데이터를 초기화하시겠습니까?\n\n삭제될 데이터:\n- 모든 참가자 정보\n- 게임 완료자 목록\n- 오답 기록\n\n이 작업은 되돌릴 수 없습니다!');
+        
+        if (!confirmed) {
+            return;
+        }
+
+        var resetStatus = document.getElementById('resetStatus');
+        resetStatus.style.display = 'block';
+        resetStatus.className = 'status loading';
+        resetStatus.textContent = '⏳ 데이터 초기화 중...';
+
+        // 모든 데이터 삭제
+        Promise.all([
+            db.ref("players").remove(),
+            db.ref("completed").remove(),
+            db.ref("wrongAnswers").remove()
+        ])
+        .then(function() {
+            resetStatus.className = 'status connected';
+            resetStatus.textContent = '✅ 모든 데이터가 초기화되었습니다!';
+            setTimeout(function() {
+                resetStatus.style.display = 'none';
+            }, 3000);
+        })
+        .catch(function(error) {
+            resetStatus.className = 'status disconnected';
+            resetStatus.textContent = '❌ 초기화 실패: ' + error.message;
+        });
+    }
+
+</script>
+</body>
+</html>
